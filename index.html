@@ -104,16 +104,55 @@ src="https://www.facebook.com/tr?id=1698998988025454&ev=PageView&noscript=1" alt
 <footer class="footer"><a href="#inicio" class="brand"><span class="brand-dot"></span><span>SOS <b>ANTOJOS</b></span></a><p>Herramienta educativa. No diagnostica ni trata trastornos de la conducta alimentaria.</p><small>© 2026 SOS Antojos</small></footer>
 </div>
 
+
 <script id="sos-growth-metrics">
 (function(){
   'use strict';
 
+  function getAttribution(){
+    var params = new URLSearchParams(window.location.search);
+    var keys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
+    var data = {};
+    keys.forEach(function(k){
+      var v = params.get(k);
+      if(v){ data[k] = v; }
+    });
+
+    // Guardar la atribución de entrada para conservarla durante la visita.
+    if(Object.keys(data).length){
+      try{ sessionStorage.setItem('sos_attribution', JSON.stringify(data)); }catch(e){}
+    } else {
+      try{
+        var saved = JSON.parse(sessionStorage.getItem('sos_attribution') || '{}');
+        Object.keys(saved).forEach(function(k){ data[k] = saved[k]; });
+      }catch(e){}
+    }
+
+    // Nombre corto para leer fácilmente el creativo en Meta.
+    data.creative = data.utm_content || 'sin_etiqueta';
+    return data;
+  }
+
+  var attribution = getAttribution();
+
   function sendEvent(name, extra){
     if (typeof window.fbq !== 'function') return;
-    var payload = {product:'SOS Antojos', value:97, currency:'MXN'};
-    if (extra) {
-      Object.keys(extra).forEach(function(k){ payload[k]=extra[k]; });
+
+    var payload = {
+      product: 'SOS Antojos',
+      value: 97,
+      currency: 'MXN',
+      creative: attribution.creative
+    };
+
+    ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(function(k){
+      if(attribution[k]) payload[k] = attribution[k];
+    });
+
+    if(extra){
+      Object.keys(extra).forEach(function(k){ payload[k] = extra[k]; });
     }
+
     window.fbq('trackCustom', name, payload);
   }
 
@@ -121,11 +160,11 @@ src="https://www.facebook.com/tr?id=1698998988025454&ev=PageView&noscript=1" alt
     var video = document.getElementById('sos-founder-video');
     var fired = {view:false,start:false,half:false,complete:false};
 
-    if (video) {
-      if ('IntersectionObserver' in window) {
+    if(video){
+      if('IntersectionObserver' in window){
         var observer = new IntersectionObserver(function(entries){
           entries.forEach(function(entry){
-            if (!fired.view && entry.isIntersecting && entry.intersectionRatio >= 0.50) {
+            if(!fired.view && entry.isIntersecting && entry.intersectionRatio >= 0.50){
               fired.view = true;
               sendEvent('SOSVideoView');
               observer.disconnect();
@@ -136,41 +175,44 @@ src="https://www.facebook.com/tr?id=1698998988025454&ev=PageView&noscript=1" alt
       }
 
       video.addEventListener('play', function(){
-        if (!fired.start) {
+        if(!fired.start){
           fired.start = true;
           sendEvent('SOSVideoStart');
         }
       }, {passive:true});
 
       video.addEventListener('timeupdate', function(){
-        if (!fired.half && Number.isFinite(video.duration) && video.duration > 0 &&
-            (video.currentTime / video.duration) >= 0.50) {
+        if(!fired.half && Number.isFinite(video.duration) && video.duration > 0 &&
+           (video.currentTime / video.duration) >= 0.50){
           fired.half = true;
           sendEvent('SOSVideo50');
         }
       }, {passive:true});
 
       video.addEventListener('ended', function(){
-        if (!fired.complete) {
+        if(!fired.complete){
           fired.complete = true;
           sendEvent('SOSVideoComplete');
         }
       }, {passive:true});
     }
 
-    document.querySelectorAll('a[href="https://pay.hotmart.com/F107195888D"]').forEach(function(link){
+    document.querySelectorAll('a[href*="pay.hotmart.com/F107195888D"]').forEach(function(link){
       link.addEventListener('click', function(){
-        sendEvent('SOSCheckoutClick', {checkout_url:'https://pay.hotmart.com/F107195888D'});
+        sendEvent('SOSCheckoutClick', {
+          checkout_url: 'https://pay.hotmart.com/F107195888D'
+        });
       });
     });
   }
 
-  if (document.readyState === 'loading') {
+  if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', initSOSMetrics, {once:true});
   } else {
     initSOSMetrics();
   }
 })();
 </script>
+
 
 </body></html>
